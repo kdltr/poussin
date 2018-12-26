@@ -16,7 +16,7 @@
 (set-read-syntax! 'ignore (lambda (_) '+ignore+))
 
 (define-record environment bindings parents)
-(define-record operative operand-tree-symbol environment-symbol code definition-environment)
+(define-record operative formal-parameters environment-formal expression definition-environment)
 (define-record applicative combiner)
 (define-record foreign-operative scheme-procedure)
 
@@ -38,11 +38,9 @@
                         (map (lambda (exp) (kernel-eval exp env)) operand-tree)
                         env))
         ((operative? combiner)
-         (kernel-eval (operative-code combiner)
-                      (make-environment (list (cons (operative-operand-tree-symbol combiner)
-                                                    operand-tree)
-                                              (cons (operative-environment-symbol combiner)
-                                                    env))
+         (kernel-eval (operative-expression combiner)
+                      (make-environment (match-formal-parameter-tree (operative-formal-parameters combiner) operand-tree
+                                          (match-formal-parameter-tree (operative-environment-formal combiner) env '()))
                                         (list (operative-definition-environment combiner)))))
         ((foreign-operative? combiner)
          ((foreign-operative-scheme-procedure combiner) operand-tree env))

@@ -2,6 +2,9 @@
 
 (load-relative "../poussin.scm")
 
+(test-group "cyclic lists"
+  (load-relative "cycle.scm"))
+
 (test-group "parameter matching"
 
 (test "matching ignore" '() (match-formal-parameter-tree #!ignore 42 '()))

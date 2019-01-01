@@ -1,7 +1,9 @@
 ;; TODO cyclic list handling everywhere
 
 (import (chicken read-syntax)
-        srfi-1)
+	srfi-1)
+
+(include "cycle.scm")
 
 (define (kernel-eval exp env)
   (cond ((symbol? exp)
@@ -182,12 +184,12 @@
                       (unwrap . ,foreign-unwrap))
                     '()))
 
-(define standard-environment (make-environment '() (list core-environment)))
+(define standard-environment
+  (make-environment '() (list core-environment)))
 
 (define (kernel-repl)
   (let ((exp (read)))
     (unless (eof-object? exp)
-      (let ((exp (case exp ((+ignore+) +ignore+) ((+inert+) +inert+) (else exp))))
         (write (kernel-eval exp standard-environment))
         (newline)
-        (kernel-repl)))))
+        (kernel-repl))))

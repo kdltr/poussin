@@ -1,9 +1,15 @@
-(import (chicken load) test)
+(import (chicken load) (chicken port) srfi-1 test utf8)
 
 (load-relative "../poussin.scm")
 
 (test-group "cyclic lists"
-  (load-relative "cycle.scm"))
+	    (load-relative "cycle.scm"))
+
+(test-group "reader"
+	    (load-relative "reader.scm"))
+
+(test-group "writer"
+	    (load-relative "writer.scm"))
 
 (test-group "parameter matching"
 

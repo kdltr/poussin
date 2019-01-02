@@ -1,0 +1,23 @@
+;; TODO lists and cyclic lists
+
+(define (kernel-write exp)
+  (cond ((eqv? exp +ignore+)
+	 (display "#ignore"))
+	((eqv? exp +inert+)
+	 (display "#inert"))
+	((number? exp)
+	 (display (number->string exp)))
+	((symbol? exp)
+	 (display (symbol->string exp)))
+	((string? exp)
+	 (write exp))
+	((pair? exp)
+	 (display "(")
+	 (kernel-write (car exp))
+	 (display " . ")
+	 (kernel-write (cdr exp))
+	 (display ")"))
+	((null? exp)
+	 (display "()"))
+	(else
+	 (error "unknown object type to write" exp))))

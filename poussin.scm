@@ -1,9 +1,13 @@
 ;; TODO cyclic list handling everywhere
 
 (import (chicken read-syntax)
-	srfi-1)
+	(chicken string)
+	srfi-1
+	utf8 utf8-srfi-14 utf8-case-map unicode-char-sets)
 
 (include "cycle.scm")
+(include "reader.scm")
+(include "writer.scm")
 
 (define (kernel-eval exp env)
   (cond ((symbol? exp)

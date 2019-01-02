@@ -29,17 +29,27 @@
 (define-record applicative combiner)
 (define-record foreign-operative scheme-procedure)
 
-;; TODO depth first search of parents
 (define (environment-lookup sym env)
-  (let* ((bindings (environment-bindings env))
-         (parents (environment-parents env))
-         (binding (assq sym bindings)))
-    (cond ((pair? binding)
-           (cdr binding))
-          ((pair? parents)
-           (environment-lookup sym (car parents)))
-          (#t
-           (error "Unbound symbol in environment" sym)))))
+  (define not-found (gensym))
+  
+  (define (lookup sym env)
+    (let* ((bindings (environment-bindings env))
+           (parents (environment-parents env))
+           (binding (assq sym bindings)))
+      (if (pair? binding)
+          (cdr binding)
+	  (let lp ((parents parents))
+	    (if (null? parents)
+		not-found
+		(let ((res (lookup sym (car parents))))
+		  (if (eqv? res not-found)
+		      (lp (cdr parents))
+		      res)))))))
+
+  (let ((res (lookup sym env)))
+    (if (eqv? res not-found)
+	(error "Unbound symbol" sym)
+	res)))
 
 (define (call-combiner combiner operand-tree env)
   (cond ((applicative? combiner)

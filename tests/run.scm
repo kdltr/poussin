@@ -31,11 +31,15 @@
                                                (b . 2)
                                                (c . 3))
                                              '()))
+
 (define simple-child-environment (make-environment '() (list simple-environment)))
+(define multi-parent-environment (make-environment '() (list empty-environment
+							     simple-child-environment)))
 
 (test "evaluating bound symbol" 42 (kernel-eval 'foo simple-environment))
 (test-error "evaluating unbound symbol" (kernel-eval 'bar simple-environment))
 (test "evaluating bound symbol in parent environment" 42 (kernel-eval 'foo simple-child-environment))
+(test "evaluating bould symbol deep in ancestors" 42 (kernel-eval 'foo multi-parent-environment))
 
 (define simple-operative (make-operative 'x 'e 'x empty-environment))
 (define simple-applicative (make-applicative simple-operative))

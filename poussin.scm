@@ -28,6 +28,11 @@
 (define-record-printer (inert _ port) (display "#!inert"))
 (set-read-syntax! 'inert (lambda (_) '+inert+))
 
+(define-record undefined)
+(define +undefined+ (make-undefined))
+(define-record-printer (undefined _ port) (display "#undefined"))
+(set-read-syntax! 'undefined (lambda (_) '+undefined+))
+
 (define-record environment bindings parents)
 (define-record operative formal-parameters environment-formal expression definition-environment)
 (define-record applicative combiner)

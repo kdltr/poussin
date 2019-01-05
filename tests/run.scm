@@ -5,11 +5,8 @@
 (test-group "cyclic lists"
 	    (load-relative "cycle.scm"))
 
-(test-group "reader"
-	    (load-relative "reader.scm"))
-
-(test-group "writer"
-	    (load-relative "writer.scm"))
+(test-group "reader and writer"
+	    (load-relative "reader-writer.scm"))
 
 (test-group "parameter matching"
 

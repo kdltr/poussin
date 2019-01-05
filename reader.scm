@@ -40,9 +40,13 @@
 
     (define (read-list)
       (skip-white-spaces)
-      (if (char=? #\) c)
-	  (begin (next-char) '())
-	  (cons (top-read) (read-list))))
+      (cond ((char=? #\) c)
+             (begin (next-char) '()))
+            ((char=? #\. c)
+             (next-char)
+             (top-read))
+            (#t
+             (cons (top-read) (read-list)))))
 
     (define (read-string)
       (case c
@@ -65,6 +69,7 @@
                  ((eof) '#!eof)
                  ((inert) +inert+)
                  ((ignore) +ignore+)
+                 ((undefined) +undefined+)
                  (else (error "unknown object" sym)))))))
 
     (define (read-character)

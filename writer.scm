@@ -1,4 +1,5 @@
 ;; TODO lists and cyclic lists
+;; TODO output-only representation (operatives, applicatives…)
 
 (define (kernel-write exp)
   (cond ((eqv? exp +ignore+)

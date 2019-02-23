@@ -25,7 +25,7 @@
 	((null? exp)
 	 (display "()"))
 	(else
-	 (error "unknown object type to write" exp))))
+	 (display exp))))
 
 (define (write-character char)
   (display

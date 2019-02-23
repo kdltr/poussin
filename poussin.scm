@@ -207,8 +207,8 @@
   (make-environment '() (list core-environment)))
 
 (define (kernel-repl)
-  (let ((exp (read)))
+  (let ((exp (kernel-read)))
     (unless (eof-object? exp)
-        (write (kernel-eval exp standard-environment))
+        (kernel-write (kernel-eval exp standard-environment))
         (newline)
         (kernel-repl))))

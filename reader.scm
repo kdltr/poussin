@@ -13,7 +13,7 @@
 
 (define (kernel-read)
   (let ((c (read-char)))
-    
+
     (define (next-char)
       (set! c (read-char)))
 
@@ -44,7 +44,11 @@
              (begin (next-char) '()))
             ((char=? #\. c)
              (next-char)
-             (top-read))
+             (let ((val (top-read)))
+               (skip-white-spaces)
+               (assert (eqv? c #\) ))
+               (next-char)
+               val))
             (#t
              (cons (top-read) (read-list)))))
 
@@ -115,5 +119,6 @@
 	     (read-number))
             (else
              (read-symbol))))
+
     (top-read)
 ))

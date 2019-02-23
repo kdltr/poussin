@@ -54,7 +54,10 @@
             (test-read '(+ (* a x) (* b y) c)
                        "(+ (* a x) (* b y) c)")
             (test-read '(a . b) "(a . b)")
-            (test-read '(a b c . d) "(a b c . d)"))
+            (test-read '(a b c . d) "(a b c . d)")
+            #;(test-read '($vau ((car . cdr)) e car) "($vau ((car . cdr)) e car)")
+            (test-read '((a . b) c) "((a . b) c)")
+)
 
 (test-group "strings"
             (test-read "foo" "\"foo\"")

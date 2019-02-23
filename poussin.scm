@@ -90,6 +90,15 @@
         (#t
          (error "malformed parameter tree" tree))))
 
+(define (kernel-load file env)
+  (with-input-from-file file
+    (lambda ()
+      (let lp ()
+        (let ((exp (kernel-read)))
+          (unless (eof-object? exp)
+            (kernel-eval exp env)
+            (lp)))))))
+
 ;; ==================
 ;; FOREIGN OPERATIVES
 ;; ==================
@@ -184,6 +193,7 @@
 
 (define core-environment
   (make-environment `((boolean? . ,foreign-boolean?)
+                      ;; TODO eq? (optional)
                       (equal? . ,foreign-equal?)
                       (symbol? . ,foreign-symbol?)
                       (inert? . ,foreign-inert?)
@@ -191,11 +201,12 @@
                       (pair? . ,foreign-pair?)
                       (null? . ,foreign-null?)
                       (cons . ,foreign-cons)
+                      ;; TODO set-car! set-cdr! copy-es-immutable (optional)
                       (environment? . ,foreign-environment?)
                       (ignore? . ,foreign-ignore?)
                       (eval . ,foreign-eval)
                       (make-environment . ,foreign-make-environment)
-                      ($define! . ,foreign-$define!)
+                      ($define! . ,foreign-$define!) ;; (optional)
                       (operative? . ,foreign-operative?*)
                       (applicative? . ,foreign-applicative?)
                       ($vau . ,foreign-$vau)
@@ -205,6 +216,8 @@
 
 (define standard-environment
   (make-environment '() (list core-environment)))
+
+(kernel-load "lib1.k" standard-environment)
 
 (define (kernel-repl)
   (let ((exp (kernel-read)))

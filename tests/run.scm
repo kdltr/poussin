@@ -62,9 +62,16 @@
 
 (test "foreign wrap call" '(1 2 3) (kernel-eval '((wrap $list) a b c) foreign-environment))
 (test "foreign $vau call" '(b a) (kernel-eval '(($vau (x y) #!ignore (list y x)) a b) foreign-environment))
-
 ) ; foreign combiners group
 
 ) ; eval group
+
+(test-group "regressions"
+
+(test-assert "$define twice" (begin
+                               (kernel-eval '($define! foo 42) standard-environment)
+                               (kernel-eval '($define! foo 42) standard-environment)))
+
+)
 
 (test-exit)

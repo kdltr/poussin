@@ -165,9 +165,8 @@
       (let* ((definiend (car operand-tree))
              (expression (cadr operand-tree))
              (expression-result (kernel-eval expression env))
-             (new-bindings (match-formal-parameter-tree definiend expression-result
-                             (environment-bindings env))))
-        (environment-bindings-set! env new-bindings)
+             (new-bindings (match-formal-parameter-tree definiend expression-result '())))
+        (environment-bindings-set! env (append new-bindings (environment-bindings env)))
         +inert+))))
 
 (define foreign-operative?* (make-foreign-predicate operative?))

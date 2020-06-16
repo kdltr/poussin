@@ -8,14 +8,17 @@
 (define (digit? c)
   (char-set-contains? char-set:digit c))
 
+
 (define (string-ci->symbol str)
   (string->symbol (utf8-string-downcase str)))
 
+(import trace)
 (define (kernel-read)
   (let ((c (read-char)))
 
     (define (next-char)
-      (set! c (read-char)))
+      (set! c (read-char))
+      c)
 
     (define (skip-white-spaces)
       (when (char-set-contains? char-set:white-space c)
@@ -24,7 +27,7 @@
     (define (read-identifier)
       (if (stop? c)
           ""
-          (conc c (begin (next-char) (read-symbol)))))
+          (conc c (begin (next-char) (read-identifier)))))
 
     (define (read-symbol)
       (string-ci->symbol (read-identifier)))
@@ -120,5 +123,6 @@
             (else
              (read-symbol))))
 
+    (trace top-read symbol->character read-character read-special read-string read-list read-number read-symbol read-identifier skip-white-spaces next-char)
     (top-read)
 ))

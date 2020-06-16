@@ -1,6 +1,10 @@
 ;; TODO cyclic list handling everywhere
 
-(import (chicken read-syntax)
+(module poussin *
+
+(import scheme
+        (chicken base)
+        (chicken read-syntax)
 	(chicken string)
 	srfi-1
 	utf8 utf8-srfi-14 utf8-case-map unicode-char-sets)
@@ -216,11 +220,17 @@
 (define standard-environment
   (make-environment '() (list core-environment)))
 
-(kernel-load "lib1.k" standard-environment)
-
 (define (kernel-repl)
   (let ((exp (kernel-read)))
     (unless (eof-object? exp)
         (kernel-write (kernel-eval exp standard-environment))
         (newline)
         (kernel-repl))))
+
+) ; module
+
+(import trace poussin)
+(trace-module 'poussin)
+
+(kernel-load "lib1.k" standard-environment)
+(cond-expand ((or compiling chicken-script) (kernel-repl)) (else))

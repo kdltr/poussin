@@ -4,23 +4,16 @@
 
 (import scheme
         (chicken base)
+        (chicken condition)
         (chicken read-syntax)
 	(chicken string)
+        (chibi generic)
 	srfi-1
 	utf8 utf8-srfi-14 utf8-case-map unicode-char-sets)
 
 (include "cycle.scm")
 (include "reader.scm")
 (include "writer.scm")
-
-(define (kernel-eval exp env)
-  (cond ((symbol? exp)
-         (environment-lookup exp env))
-        ((pair? exp)
-         (call-combiner (kernel-eval (car exp) env)
-                        (cdr exp)
-                        env))
-        (#t exp)))
 
 (define-record ignore)
 (define +ignore+ (make-ignore))
@@ -64,21 +57,6 @@
 	(error "Unbound symbol" sym)
 	res)))
 
-(define (call-combiner combiner operand-tree env)
-  (cond ((applicative? combiner)
-         (call-combiner (applicative-combiner combiner)
-                        (map (lambda (exp) (kernel-eval exp env)) operand-tree)
-                        env))
-        ((operative? combiner)
-         (kernel-eval (operative-expression combiner)
-                      (make-environment (match-formal-parameter-tree (operative-formal-parameters combiner) operand-tree
-                                          (match-formal-parameter-tree (operative-environment-formal combiner) env '()))
-                                        (list (operative-definition-environment combiner)))))
-        ((foreign-operative? combiner)
-         ((foreign-operative-scheme-procedure combiner) operand-tree env))
-        (#t
-          (error "Non-combiner in combiner position" combiner))))
-
 (define (match-formal-parameter-tree tree object result)
   (cond ((symbol? tree)
          (when (assq tree result)
@@ -93,6 +71,39 @@
            (match-formal-parameter-tree (cdr tree) (cdr object) result)))
         (#t
          (error "malformed parameter tree" tree))))
+
+
+(define-generic kernel-eval)
+
+;; everything is self-evaluating by default
+(define-method (kernel-eval exp env) exp)
+
+(define-method (kernel-eval (exp symbol?) env)
+  (environment-lookup exp env))
+
+(define-method (kernel-eval (exp pair?) env)
+  (combine (kernel-eval (car exp) env)
+           (cdr exp)
+           env))
+
+(define-generic combine)
+
+#;(define-method (combine combiner operands env)
+  (error "Don't know how to combine this" combiner))
+
+(define-method (combine (combiner applicative?) operand-tree env)
+  (combine (applicative-combiner combiner)
+           (map (lambda (exp) (kernel-eval exp env)) operand-tree)
+           env))
+
+(define-method (combine (combiner operative?) operand-tree env)
+  (kernel-eval (operative-expression combiner)
+               (make-environment (match-formal-parameter-tree (operative-formal-parameters combiner) operand-tree
+                                   (match-formal-parameter-tree (operative-environment-formal combiner) env '()))
+                                 (list (operative-definition-environment combiner)))))
+
+(define-method (combine (combiner foreign-operative?) operand-tree env)
+  ((foreign-operative-scheme-procedure combiner) operand-tree env))
 
 (define (kernel-load file env)
   (with-input-from-file file
@@ -121,12 +132,8 @@
       (every pred operand-tree))))
 
 (define foreign-boolean? (make-foreign-predicate boolean?))
-
-(define foreign-equal?
-  (make-foreign-applicative equal?))
-
+(define foreign-equal? (make-foreign-applicative equal?))
 (define foreign-symbol? (make-foreign-predicate symbol?))
-
 (define foreign-inert? (make-foreign-predicate inert?))
 
 (define foreign-$if
@@ -223,9 +230,10 @@
 (define (kernel-repl)
   (let ((exp (kernel-read)))
     (unless (eof-object? exp)
+      (handle-exceptions exn (print-error-message exn (current-error-port) "Kernel error")
         (kernel-write (kernel-eval exp standard-environment))
-        (newline)
-        (kernel-repl))))
+        (newline))
+      (kernel-repl))))
 
 ) ; module
 

@@ -1,0 +1,7 @@
+poussin
+*.so
+*.o
+*.c
+*.import.scm
+*.install.sh
+*.build.sh

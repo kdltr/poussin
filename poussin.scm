@@ -229,8 +229,7 @@
 
 ) ; module
 
-(import trace poussin)
-(trace-module 'poussin)
+(import poussin)
 
 (kernel-load "lib1.k" standard-environment)
 (cond-expand ((or compiling chicken-script) (kernel-repl)) (else))

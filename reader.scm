@@ -12,7 +12,6 @@
 (define (string-ci->symbol str)
   (string->symbol (utf8-string-downcase str)))
 
-(import trace)
 (define (kernel-read)
   (let ((c (read-char)))
 
@@ -25,6 +24,7 @@
           (begin (next-char) (skip-white-spaces) #t)
           #f))
     
+    ;; FIXME tail-recursive
     (define (read-identifier)
       (if (stop? c)
           ""
@@ -126,6 +126,5 @@
             (else
              (read-symbol))))
 
-    (trace top-read symbol->character read-character read-special read-string read-list read-number read-symbol read-identifier skip-white-spaces next-char)
     (top-read)
 ))

@@ -21,13 +21,16 @@
       c)
 
     (define (skip-white-spaces)
-      (when (char-set-contains? char-set:white-space c)
-	(begin (next-char) (skip-white-spaces))))
+      (if (char-set-contains? char-set:white-space c)
+          (begin (next-char) (skip-white-spaces) #t)
+          #f))
     
     (define (read-identifier)
       (if (stop? c)
           ""
-          (conc c (begin (next-char) (read-identifier)))))
+          (let* ((head c)
+                 (rest (begin (next-char) (read-identifier))))
+            (conc head rest))))
 
     (define (read-symbol)
       (string-ci->symbol (read-identifier)))

@@ -4,7 +4,6 @@
 
 (import scheme
         (chicken base)
-        (chicken condition)
         (chicken format)
         (chicken read-syntax)
 	(chicken string)
@@ -125,9 +124,20 @@
       (every pred operand-tree))))
 
 (define foreign-boolean? (make-foreign-predicate boolean?))
-(define foreign-equal? (make-foreign-applicative equal?))
 (define foreign-symbol? (make-foreign-predicate symbol?))
 (define foreign-inert? (make-foreign-predicate inert?))
+
+(define (n-equal? args)
+  (if (or (null? args)
+          (null? (cdr args)))
+      #t
+      (and (equal? (car args) (cadr args))
+           (n-equal? (cdr args)))))
+
+(define foreign-equal?
+  (make-foreign-applicative
+    (lambda (operand-tree env)
+      (n-equal? operand-tree))))
 
 (define foreign-$if
   (make-foreign-operative

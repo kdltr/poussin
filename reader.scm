@@ -24,16 +24,15 @@
           (begin (next-char) (skip-white-spaces) #t)
           #f))
     
-    ;; FIXME tail-recursive
-    (define (read-identifier)
+    (define (read-identifier acc)
       (if (stop? c)
-          ""
-          (let* ((head c)
-                 (rest (begin (next-char) (read-identifier))))
-            (conc head rest))))
+          (conc acc "") ;; convert to string
+          (let* ((char c))
+            (next-char)
+            (read-identifier (conc acc char)))))
 
     (define (read-symbol)
-      (string-ci->symbol (read-identifier)))
+      (string-ci->symbol (read-identifier "")))
     
     (define (read-number)
       (let lp ((sum 0))
@@ -79,7 +78,6 @@
                  ((eof) '#!eof)
                  ((inert) +inert+)
                  ((ignore) +ignore+)
-                 ((undefined) +undefined+)
                  (else (error "unknown object" sym)))))))
 
     (define (read-character)
@@ -89,7 +87,7 @@
 	    char
 	    (symbol->character
 	     (string-ci->symbol
-	      (conc char (read-identifier)))))))
+	       (read-identifier char))))))
 
     (define (symbol->character sym)
       (case sym
@@ -120,7 +118,7 @@
 	     (next-char)
 	     (if (digit? c)
 		 (- (read-number))
-		 (string-ci->symbol (conc #\- (read-identifier)))))
+		 (string-ci->symbol (read-identifier #\-))))
 	    ((digit? c)
 	     (read-number))
             (else

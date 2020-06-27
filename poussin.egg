@@ -1,1 +1,4 @@
-((components (program poussin)))
+((components (extension poussin)
+             (program repl
+                      (install-name "poussin")
+                      (component-dependencies poussin))))

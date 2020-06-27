@@ -6,8 +6,6 @@
 	 (display "#ignore"))
 	((eqv? exp +inert+)
 	 (display "#inert"))
-        ((eqv? exp +undefined+)
-         (display "#undefined"))
         ((boolean? exp)
          (display (if exp "#t" "#f")))
 	((number? exp)

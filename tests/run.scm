@@ -1,6 +1,8 @@
 (import (chicken load) (chicken port) srfi-1 test utf8)
 
 (load-relative "../poussin.scm")
+(import poussin)
+
 
 (test-group "cyclic lists"
 	    (load-relative "cycle.scm"))
@@ -10,7 +12,7 @@
 
 (test-group "parameter matching"
 
-(test "matching ignore" '() (match-formal-parameter-tree #!ignore 42 '()))
+(test "matching ignore" '() (match-formal-parameter-tree +ignore+ 42 '()))
 (test "matching symbol" '((a . 42)) (match-formal-parameter-tree 'a 42 '()))
 (test "matching nil" '() (match-formal-parameter-tree '() '() '()))
 (test-error "nil matching error" (match-formal-parameter-tree '() 42 '()))
@@ -61,7 +63,7 @@
                                               (list combiner-environment)))
 
 (test "foreign wrap call" '(1 2 3) (kernel-eval '((wrap $list) a b c) foreign-environment))
-(test "foreign $vau call" '(b a) (kernel-eval '(($vau (x y) #!ignore (list y x)) a b) foreign-environment))
+(test "foreign $vau call" '(b a) (kernel-eval `(($vau (x y) ,+ignore+ (list y x)) a b) foreign-environment))
 ) ; foreign combiners group
 
 ) ; eval group
@@ -69,8 +71,8 @@
 (test-group "regressions"
 
 (test-assert "$define twice" (begin
-                               (kernel-eval '($define! foo 42) standard-environment)
-                               (kernel-eval '($define! foo 42) standard-environment)))
+                               (kernel-eval '($define! foo 42) core-environment)
+                               (kernel-eval '($define! foo 42) core-environment)))
 
 )
 

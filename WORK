@@ -1,0 +1,6 @@
+# in win
+csi -s poussin.scm
+chicken-install -vn
+
+# TODO
+- equal? doesn’t work

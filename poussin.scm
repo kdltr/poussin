@@ -5,6 +5,7 @@
 (import scheme
         (chicken base)
         (chicken condition)
+        (chicken format)
         (chicken read-syntax)
 	(chicken string)
         (chibi generic)
@@ -15,20 +16,12 @@
 (include "reader.scm")
 (include "writer.scm")
 
-(define-record ignore)
-(define +ignore+ (make-ignore))
-(define-record-printer (ignore _ port) (display "#!ignore"))
-(set-read-syntax! 'ignore (lambda (_) '+ignore+))
+(define-record singleton)
+(define +ignore+ (make-singleton))
+(define +inert+ (make-singleton))
 
-(define-record inert)
-(define +inert+ (make-inert))
-(define-record-printer (inert _ port) (display "#!inert"))
-(set-read-syntax! 'inert (lambda (_) '+inert+))
-
-(define-record undefined)
-(define +undefined+ (make-undefined))
-(define-record-printer (undefined _ port) (display "#undefined"))
-(set-read-syntax! 'undefined (lambda (_) '+undefined+))
+(define (ignore? x) (eq? x +ignore+))
+(define (inert? x) (eq? x +inert+))
 
 (define-record environment bindings parents)
 (define-record operative formal-parameters environment-formal expression definition-environment)
@@ -224,20 +217,4 @@
                       (unwrap . ,foreign-unwrap))
                     '()))
 
-(define standard-environment
-  (make-environment '() (list core-environment)))
-
-(define (kernel-repl)
-  (let ((exp (kernel-read)))
-    (unless (eof-object? exp)
-      (handle-exceptions exn (print-error-message exn (current-error-port) "Kernel error")
-        (kernel-write (kernel-eval exp standard-environment))
-        (newline))
-      (kernel-repl))))
-
 ) ; module
-
-(import poussin)
-
-(kernel-load "lib1.k" standard-environment)
-(cond-expand ((or compiling chicken-script) (kernel-repl)) (else))

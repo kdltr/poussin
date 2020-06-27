@@ -15,8 +15,7 @@
 
 (test-group "special objects"
             (test-read +inert+ "#inert")
-            (test-read +ignore+ "#ignore")
-            (test-read +undefined+ "#undefined"))
+            (test-read +ignore+ "#ignore"))
 
 (test-group "some integers"
 	    (for-each

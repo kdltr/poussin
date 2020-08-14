@@ -3,4 +3,6 @@ csi -s poussin.scm
 chicken-install -vn
 
 # TODO
-
+- Generic write
+- data encapsulation procedures
+- Generic in target lang

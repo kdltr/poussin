@@ -1,20 +1,5 @@
 ;; TODO cyclic list handling everywhere
 
-(module poussin *
-
-(import scheme
-        (chicken base)
-        (chicken format)
-        (chicken read-syntax)
-	(chicken string)
-        (chibi generic)
-	srfi-1
-	utf8 utf8-srfi-14 utf8-case-map unicode-char-sets)
-
-(include "cycle.scm")
-(include "reader.scm")
-(include "writer.scm")
-
 (define-record singleton)
 (define +ignore+ (make-singleton))
 (define +inert+ (make-singleton))
@@ -28,7 +13,7 @@
 (define-record foreign-operative scheme-procedure)
 
 (define (environment-lookup sym env)
-  (define not-found (gensym))
+  (define not-found (list #t))
   
   (define (lookup sym env)
     (let* ((bindings (environment-bindings env))
@@ -51,9 +36,9 @@
 
 (define (match-formal-parameter-tree tree object result)
   (cond ((symbol? tree)
-         (when (assq tree result)
-           (error "symbol occurs more than once in parameter tree" tree))
-         (cons (cons tree object) result))
+         (if (assq tree result)
+             (error "symbol occurs more than once in parameter tree" tree)
+             (cons (cons tree object) result)))
         ((ignore? tree)
          result)
         ((and (null? tree) (null? object))
@@ -64,47 +49,38 @@
         (#t
          (error "malformed parameter tree" tree))))
 
+(define (kernel-eval exp env)
+  (cond ((symbol? exp) (environment-lookup exp env))
+        ((pair? exp) (combine (kernel-eval (car exp) env)
+                              (cdr exp)
+                              env))
+        (#t exp)))
 
-(define-generic kernel-eval)
+(define (combine combiner operands env)
+  (cond ((operative? combiner)
+         (operate combiner operands env))
+        ((foreign-operative? combiner)
+         ((foreign-operative-scheme-procedure combiner)
+          operands
+          env))
+        ((applicative? combiner)
+         (combine (applicative-combiner combiner)
+                  (map-kernel-eval operands env)
+                  env))
+        (#t
+            (error 'combine "non-combiner in combiner position" combiner))))
 
-;; everything is self-evaluating by default
-(define-method (kernel-eval exp env) exp)
+(define (operate operative operands env)
+  (kernel-eval (operative-expression operative)
+               (make-environment (match-formal-parameter-tree (operative-formal-parameters operative) operands
+                                   (match-formal-parameter-tree (operative-environment-formal operative) env '()))
+                                 (list (operative-definition-environment operative)))))
 
-(define-method (kernel-eval (exp symbol?) env)
-  (environment-lookup exp env))
+(define (map-kernel-eval operands env)
+  (map
+    (lambda (exp) (kernel-eval exp env))
+    operands))
 
-(define-method (kernel-eval (exp pair?) env)
-  (combine (kernel-eval (car exp) env)
-           (cdr exp)
-           env))
-
-(define-generic combine)
-
-#;(define-method (combine combiner operands env)
-  (error "Don't know how to combine this" combiner))
-
-(define-method (combine (combiner applicative?) operand-tree env)
-  (combine (applicative-combiner combiner)
-           (map (lambda (exp) (kernel-eval exp env)) operand-tree)
-           env))
-
-(define-method (combine (combiner operative?) operand-tree env)
-  (kernel-eval (operative-expression combiner)
-               (make-environment (match-formal-parameter-tree (operative-formal-parameters combiner) operand-tree
-                                   (match-formal-parameter-tree (operative-environment-formal combiner) env '()))
-                                 (list (operative-definition-environment combiner)))))
-
-(define-method (combine (combiner foreign-operative?) operand-tree env)
-  ((foreign-operative-scheme-procedure combiner) operand-tree env))
-
-(define (kernel-load file env)
-  (with-input-from-file file
-    (lambda ()
-      (let lp ()
-        (let ((exp (kernel-read)))
-          (unless (eof-object? exp)
-            (kernel-eval exp env)
-            (lp)))))))
 
 ;; ==================
 ;; FOREIGN OPERATIVES
@@ -121,7 +97,12 @@
 (define (make-foreign-predicate pred)
   (make-foreign-applicative
     (lambda (operand-tree env)
-      (every pred operand-tree))))
+      (let lp ((args operand-tree))
+        (cond ((null? args)
+               #t)
+              ((pred (car args))
+               (lp (cdr args)))
+              (#t #f))))))
 
 (define foreign-boolean? (make-foreign-predicate boolean?))
 (define foreign-symbol? (make-foreign-predicate symbol?))
@@ -146,11 +127,10 @@
             (consequent (cadr operand-tree))
             (alternative (caddr operand-tree)))
         (let ((test-result (kernel-eval test env)))
-          (unless (boolean? test-result)
-            (error "result of $if test is not a boolean" (cons '$if operand-tree)))
-          (if test-result
-              (kernel-eval consequent env)
-              (kernel-eval alternative env)))))))
+          (cond ((not (boolean? test-result))
+                 (error '$if "result of $if test is not a boolean" (cons '$if operand-tree)))
+                (test-result (kernel-eval consequent env))
+                (#t (kernel-eval alternative env))))))))
 
 (define foreign-pair? (make-foreign-predicate pair?))
 (define foreign-null? (make-foreign-predicate null?))
@@ -226,5 +206,3 @@
                       (wrap . ,foreign-wrap)
                       (unwrap . ,foreign-unwrap))
                     '()))
-
-) ; module

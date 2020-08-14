@@ -31,13 +31,13 @@
 
   (let ((res (lookup sym env)))
     (if (eqv? res not-found)
-	(error "Unbound symbol" sym)
+	(error 'environment-lookup "Unbound symbol" sym)
 	res)))
 
 (define (match-formal-parameter-tree tree object result)
   (cond ((symbol? tree)
          (if (assq tree result)
-             (error "symbol occurs more than once in parameter tree" tree)
+             (error 'match-formal-parameter-tree "symbol occurs more than once in parameter tree" tree)
              (cons (cons tree object) result)))
         ((ignore? tree)
          result)
@@ -47,7 +47,7 @@
          (match-formal-parameter-tree (car tree) (car object)
            (match-formal-parameter-tree (cdr tree) (cdr object) result)))
         (#t
-         (error "malformed parameter tree" tree))))
+         (error 'match-formal-parameter-tree "malformed parameter tree" tree))))
 
 (define (kernel-eval exp env)
   (cond ((symbol? exp) (environment-lookup exp env))

@@ -45,7 +45,7 @@
 (test "evaluating bound symbol in parent environment" 42 (kernel-eval 'foo simple-child-environment))
 (test "evaluating bould symbol deep in ancestors" 42 (kernel-eval 'foo multi-parent-environment))
 
-(define simple-operative (kernel-eval (list foreign-$vau 'x 'e 'x) empty-environment))
+(define simple-operative (kernel-eval (list (environment-lookup '$vau core-environment) 'x 'e 'x) empty-environment))
 (define simple-applicative (make-applicative simple-operative))
 (define combiner-environment (make-environment (list (cons '$list simple-operative)
                                                      (cons 'list simple-applicative))
@@ -55,15 +55,15 @@
 (test "evaluating simple applicative" '(1 2 3) (kernel-eval '(list a b c) combiner-environment))
 
 
-(test-group "foreign combiners"
+(test-group "primitive combiners"
 
-(define foreign-environment (make-environment (list (cons '$vau foreign-$vau)
-                                                    (cons 'wrap foreign-wrap))
+(define primitive-environment (make-environment (list (cons '$vau (environment-lookup '$vau core-environment))
+                                                    (cons 'wrap (environment-lookup 'wrap core-environment)))
                                               (list combiner-environment)))
 
-(test "foreign wrap call" '(1 2 3) (kernel-eval '((wrap $list) a b c) foreign-environment))
-(test "foreign $vau call" '(b a) (kernel-eval `(($vau (x y) ,+ignore+ (list y x)) a b) foreign-environment))
-) ; foreign combiners group
+(test "primitive wrap call" '(1 2 3) (kernel-eval '((wrap $list) a b c) primitive-environment))
+(test "primitive $vau call" '(b a) (kernel-eval `(($vau (x y) ,+ignore+ (list y x)) a b) primitive-environment))
+) ; primitive combiners group
 
 ) ; eval group
 

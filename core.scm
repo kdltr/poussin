@@ -74,45 +74,56 @@
     operands))
 
 
-;; ==================
-;; FOREIGN OPERATIVES
-;; ==================
+;; ===================
+;; PRIMITVE OPERATIVES
+;; ===================
 
-;; foreign operatives are regular Scheme lambda that receive
-;; the operand-tree non-evaluated and the dynamic environment
+;; TODO eq? (optional)
+;; TODO set-car! set-cdr! copy-es-immutable (optional)
 
-;; helper for foreign applicatives
-(define (make-foreign-applicative proc)
-  (make-applicative (make-operative proc)))
+(define core-environment (make-environment '() '()))
 
-;; helper for foreign predicates
-(define (make-foreign-predicate pred)
-  (make-foreign-applicative
-    (lambda (operand-tree env)
-      (let lp ((args operand-tree))
+(define (kernel-define! symbol value)
+  (environment-bindings-set!
+    core-environment
+    (cons (cons symbol value)
+          (environment-bindings core-environment))))
+
+;; helper for scheme applicatives
+(define (make-scheme-applicative proc)
+  (make-applicative (make-operative (lambda (args env) (apply proc args)))))
+
+;; helper for scheme predicates
+(define (make-scheme-predicate pred)
+  (make-scheme-applicative
+    (lambda args
+      (let lp ((args args))
         (cond ((null? args)
                #t)
               ((pred (car args))
                (lp (cdr args)))
               (#t #f))))))
 
-(define foreign-boolean? (make-foreign-predicate boolean?))
-(define foreign-symbol? (make-foreign-predicate symbol?))
-(define foreign-inert? (make-foreign-predicate inert?))
+(kernel-define! 'boolean? (make-scheme-predicate boolean?))
+(kernel-define! 'symbol? (make-scheme-predicate symbol?))
+(kernel-define! 'inert? (make-scheme-predicate inert?))
+(kernel-define! 'pair? (make-scheme-predicate pair?))
+(kernel-define! 'null? (make-scheme-predicate null?))
+(kernel-define! 'environment? (make-scheme-predicate environment?))
+(kernel-define! 'ignore? (make-scheme-predicate ignore?))
+(kernel-define! 'operative? (make-scheme-predicate operative?))
+(kernel-define! 'applicative? (make-scheme-predicate applicative?))
 
-(define (n-equal? args)
+(define (n-equal? . args)
   (if (or (null? args)
           (null? (cdr args)))
       #t
       (and (equal? (car args) (cadr args))
-           (n-equal? (cdr args)))))
+           (apply n-equal? (cdr args)))))
 
-(define foreign-equal?
-  (make-foreign-applicative
-    (lambda (operand-tree env)
-      (n-equal? operand-tree))))
+(kernel-define! 'equal? (make-scheme-applicative n-equal?))
 
-(define foreign-$if
+(kernel-define! '$if
   (make-operative
     (lambda (operand-tree env)
       (let ((test (car operand-tree))
@@ -120,32 +131,19 @@
             (alternative (caddr operand-tree)))
         (let ((test-result (kernel-eval test env)))
           (cond ((not (boolean? test-result))
-                 (error '$if "result of $if test is not a boolean" (cons '$if operand-tree)))
+                 (error '$if "result of $if test is not a boolean"
+                        (cons '$if operand-tree)))
                 (test-result (kernel-eval consequent env))
                 (#t (kernel-eval alternative env))))))))
 
-(define foreign-pair? (make-foreign-predicate pair?))
-(define foreign-null? (make-foreign-predicate null?))
+(kernel-define! 'cons (make-scheme-applicative cons))
+(kernel-define! 'eval (make-scheme-applicative kernel-eval))
 
-(define foreign-cons
-  (make-foreign-applicative
-    (lambda (operand-tree env)
-      (cons (car operand-tree) (cadr operand-tree)))))
+(kernel-define! 'make-environment
+  (make-scheme-applicative
+    (lambda parents (make-environment '() parents))))
 
-(define foreign-environment? (make-foreign-predicate environment?))
-(define foreign-ignore? (make-foreign-predicate ignore?))
-
-(define foreign-eval
-  (make-foreign-applicative
-    (lambda (operand-tree env)
-      (kernel-eval (car operand-tree) (cadr operand-tree)))))
-
-(define foreign-make-environment
-  (make-foreign-applicative
-    (lambda (operand-tree env)
-      (make-environment '() operand-tree))))
-
-(define foreign-$define!
+(kernel-define! '$define!
   (make-operative
     (lambda (operand-tree env)
       (let* ((definiend (car operand-tree))
@@ -155,10 +153,8 @@
         (environment-bindings-set! env (append new-bindings (environment-bindings env)))
         +inert+))))
 
-(define foreign-operative? (make-foreign-predicate operative?))
-(define foreign-applicative? (make-foreign-predicate applicative?))
 
-(define foreign-$vau
+(kernel-define! '$vau
   (make-operative
     (lambda (operand-tree static-env)
       (let ((formals (car operand-tree))
@@ -171,35 +167,5 @@
                                              (match-formal-parameter-tree eformal dynamic-env '()))
                                            (list static-env)))))))))
 
-(define foreign-wrap
-  (make-foreign-applicative
-    (lambda (operand-tree environment)
-      (make-applicative (car operand-tree)))))
-
-(define foreign-unwrap
-  (make-foreign-applicative
-    (lambda (operand-tree env)
-      (applicative-combiner (car operand-tree)))))
-
-(define core-environment
-  (make-environment `((boolean? . ,foreign-boolean?)
-                      ;; TODO eq? (optional)
-                      (equal? . ,foreign-equal?)
-                      (symbol? . ,foreign-symbol?)
-                      (inert? . ,foreign-inert?)
-                      ($if . ,foreign-$if)
-                      (pair? . ,foreign-pair?)
-                      (null? . ,foreign-null?)
-                      (cons . ,foreign-cons)
-                      ;; TODO set-car! set-cdr! copy-es-immutable (optional)
-                      (environment? . ,foreign-environment?)
-                      (ignore? . ,foreign-ignore?)
-                      (eval . ,foreign-eval)
-                      (make-environment . ,foreign-make-environment)
-                      ($define! . ,foreign-$define!) ;; (optional)
-                      (operative? . ,foreign-operative?)
-                      (applicative? . ,foreign-applicative?)
-                      ($vau . ,foreign-$vau)
-                      (wrap . ,foreign-wrap)
-                      (unwrap . ,foreign-unwrap))
-                    '()))
+(kernel-define! 'wrap (make-scheme-applicative make-applicative))
+(kernel-define! 'unwrap (make-scheme-applicative applicative-combiner))

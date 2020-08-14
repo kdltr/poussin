@@ -91,13 +91,13 @@
 
     (define (symbol->character sym)
       (case sym
-	((null) #\null)
+	((null) #\nul)
 	((alarm) #\alarm)
 	((backspace) #\backspace)
 	((tab) #\tab)
 	((newline) #\newline)
 	((return) #\return)
-	((escape) #\escape)
+	((escape) #\esc)
 	((delete) #\delete)
 	((space) #\space)
 	(else (error "unknown character" sym))))

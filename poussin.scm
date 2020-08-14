@@ -8,9 +8,8 @@
 (define (inert? x) (eq? x +inert+))
 
 (define-record environment bindings parents)
-(define-record operative formal-parameters environment-formal expression definition-environment)
+(define-record operative action)
 (define-record applicative combiner)
-(define-record foreign-operative scheme-procedure)
 
 (define (environment-lookup sym env)
   (define not-found (list #t))
@@ -59,10 +58,6 @@
 (define (combine combiner operands env)
   (cond ((operative? combiner)
          (operate combiner operands env))
-        ((foreign-operative? combiner)
-         ((foreign-operative-scheme-procedure combiner)
-          operands
-          env))
         ((applicative? combiner)
          (combine (applicative-combiner combiner)
                   (map-kernel-eval operands env)
@@ -71,10 +66,7 @@
             (error 'combine "non-combiner in combiner position" combiner))))
 
 (define (operate operative operands env)
-  (kernel-eval (operative-expression operative)
-               (make-environment (match-formal-parameter-tree (operative-formal-parameters operative) operands
-                                   (match-formal-parameter-tree (operative-environment-formal operative) env '()))
-                                 (list (operative-definition-environment operative)))))
+  ((operative-action operative) operands env))
 
 (define (map-kernel-eval operands env)
   (map
@@ -91,7 +83,7 @@
 
 ;; helper for foreign applicatives
 (define (make-foreign-applicative proc)
-  (make-applicative (make-foreign-operative proc)))
+  (make-applicative (make-operative proc)))
 
 ;; helper for foreign predicates
 (define (make-foreign-predicate pred)
@@ -121,7 +113,7 @@
       (n-equal? operand-tree))))
 
 (define foreign-$if
-  (make-foreign-operative
+  (make-operative
     (lambda (operand-tree env)
       (let ((test (car operand-tree))
             (consequent (cadr operand-tree))
@@ -154,7 +146,7 @@
       (make-environment '() operand-tree))))
 
 (define foreign-$define!
-  (make-foreign-operative
+  (make-operative
     (lambda (operand-tree env)
       (let* ((definiend (car operand-tree))
              (expression (cadr operand-tree))
@@ -163,16 +155,21 @@
         (environment-bindings-set! env (append new-bindings (environment-bindings env)))
         +inert+))))
 
-(define foreign-operative?* (make-foreign-predicate operative?))
+(define foreign-operative? (make-foreign-predicate operative?))
 (define foreign-applicative? (make-foreign-predicate applicative?))
 
 (define foreign-$vau
-  (make-foreign-operative
-    (lambda (operand-tree environment)
+  (make-operative
+    (lambda (operand-tree static-env)
       (let ((formals (car operand-tree))
             (eformal (cadr operand-tree))
             (expr (caddr operand-tree)))
-        (make-operative formals eformal expr environment)))))
+        (make-operative
+          (lambda (operands dynamic-env)
+            (kernel-eval expr
+                         (make-environment (match-formal-parameter-tree formals operands
+                                             (match-formal-parameter-tree eformal dynamic-env '()))
+                                           (list static-env)))))))))
 
 (define foreign-wrap
   (make-foreign-applicative
@@ -200,7 +197,7 @@
                       (eval . ,foreign-eval)
                       (make-environment . ,foreign-make-environment)
                       ($define! . ,foreign-$define!) ;; (optional)
-                      (operative? . ,foreign-operative?*)
+                      (operative? . ,foreign-operative?)
                       (applicative? . ,foreign-applicative?)
                       ($vau . ,foreign-$vau)
                       (wrap . ,foreign-wrap)

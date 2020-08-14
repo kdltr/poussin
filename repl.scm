@@ -19,9 +19,3 @@
 
 (define ground-environment
   (make-environment '() (list core-environment)))
-
-(kernel-load "../kernel-lib/lib1.k" ground-environment)
-(cond-expand
-      ((or compiling chicken-script)
-       (kernel-repl ground-environment))
-      (else))

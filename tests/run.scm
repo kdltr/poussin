@@ -1,8 +1,7 @@
 (import (chicken load) (chicken port) srfi-1 test utf8)
 
-(load-relative "../poussin.scm")
+(load-relative "../chicken.scm")
 (import poussin)
-
 
 (test-group "cyclic lists"
 	    (load-relative "cycle.scm"))
@@ -46,7 +45,7 @@
 (test "evaluating bound symbol in parent environment" 42 (kernel-eval 'foo simple-child-environment))
 (test "evaluating bould symbol deep in ancestors" 42 (kernel-eval 'foo multi-parent-environment))
 
-(define simple-operative (make-operative 'x 'e 'x empty-environment))
+(define simple-operative (kernel-eval (list foreign-$vau 'x 'e 'x) empty-environment))
 (define simple-applicative (make-applicative simple-operative))
 (define combiner-environment (make-environment (list (cons '$list simple-operative)
                                                      (cons 'list simple-applicative))

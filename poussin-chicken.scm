@@ -14,6 +14,8 @@
 (include "core.scm")
 (include "repl.scm")
 
+(include "bonus.scm")
+
 (cond-expand
       (compiling
         (let continue ()

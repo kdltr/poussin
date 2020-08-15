@@ -96,11 +96,10 @@
     operands))
 
 
-;; ===================
-;; PRIMITVE OPERATIVES
-;; ===================
+;; ==================
+;; PRIMITVE COMBINERS
+;; ==================
 
-;; TODO eq? (optional)
 ;; TODO set-car! set-cdr! copy-es-immutable (optional)
 
 (define core-environment (make-environment))
@@ -123,25 +122,32 @@
                (lp (cdr args)))
               (#t #f))))))
 
+;; Booleans
 (kernel-define! 'boolean? (make-scheme-predicate boolean?))
-(kernel-define! 'symbol? (make-scheme-predicate symbol?))
-(kernel-define! 'inert? (make-scheme-predicate inert?))
-(kernel-define! 'pair? (make-scheme-predicate pair?))
-(kernel-define! 'null? (make-scheme-predicate null?))
-(kernel-define! 'environment? (make-scheme-predicate environment?))
-(kernel-define! 'ignore? (make-scheme-predicate ignore?))
-(kernel-define! 'operative? (make-scheme-predicate operative?))
-(kernel-define! 'applicative? (make-scheme-predicate applicative?))
 
+;; Equivalence under mutation
+(define (n-eqv? . args)
+  (if (or (null? args)
+          (null? (cdr args)))
+      #t
+      (and (eqv? (car args) (cadr args))
+           (apply n-eqv? (cdr args)))))
+(kernel-define! 'eq? (make-scheme-applicative eqv?))
+
+;; Equivalence up to mutation
 (define (n-equal? . args)
   (if (or (null? args)
           (null? (cdr args)))
       #t
       (and (equal? (car args) (cadr args))
            (apply n-equal? (cdr args)))))
-
 (kernel-define! 'equal? (make-scheme-applicative n-equal?))
 
+;; Symbols
+(kernel-define! 'symbol? (make-scheme-predicate symbol?))
+
+;; Control
+(kernel-define! 'inert? (make-scheme-predicate inert?))
 (kernel-define! '$if
   (make-operative
     (lambda (operand-tree env)
@@ -155,12 +161,18 @@
                 (test-result (kernel-eval consequent env))
                 (#t (kernel-eval alternative env))))))))
 
+;; Pairs and lists
+(kernel-define! 'pair? (make-scheme-predicate pair?))
+(kernel-define! 'null? (make-scheme-predicate null?))
 (kernel-define! 'cons (make-scheme-applicative cons))
+
+;; Environments
+(kernel-define! 'environment? (make-scheme-predicate environment?))
+(kernel-define! 'ignore? (make-scheme-predicate ignore?))
 (kernel-define! 'eval (make-scheme-applicative kernel-eval))
+(kernel-define! 'make-environment (make-scheme-applicative make-environment))
 
-(kernel-define! 'make-environment
-  (make-scheme-applicative make-environment))
-
+;; Environment mutation
 (kernel-define! '$define!
   (make-operative
     (lambda (operand-tree env)
@@ -171,7 +183,9 @@
         (add-bindings! env new-bindings)
         +inert+))))
 
-
+;; Combiners
+(kernel-define! 'operative? (make-scheme-predicate operative?))
+(kernel-define! 'applicative? (make-scheme-predicate applicative?))
 (kernel-define! '$vau
   (make-operative
     (lambda (operand-tree static-env)
@@ -185,6 +199,5 @@
                              (match-formal-parameter-tree formals operands
                                (match-formal-parameter-tree eformal dynamic-env '())))
               (kernel-eval expr env))))))))
-
 (kernel-define! 'wrap (make-scheme-applicative wrap))
 (kernel-define! 'unwrap (make-scheme-applicative unwrap))

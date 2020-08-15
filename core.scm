@@ -1,37 +1,62 @@
 ;; TODO cyclic list handling everywhere
 
-(define-record singleton)
-(define +ignore+ (make-singleton))
-(define +inert+ (make-singleton))
+($provide! (+ignore+ ignore?)
+  (define-values (e ignore? d) (make-encapsulation-type))
+  (define +ignore+ (e 'ignore)))
 
-(define (ignore? x) (eq? x +ignore+))
-(define (inert? x) (eq? x +inert+))
+($provide! (+inert+ inert?)
+  (define-values (e inert? d) (make-encapsulation-type))
+  (define +inert+ (e 'inert)))
 
-(define-record environment bindings parents)
-(define-record operative action)
-(define-record applicative combiner)
+($provide! (make-environment
+            environment?
+            lookup
+            add-bindings!)
 
-(define (environment-lookup sym env)
-  (define not-found (list #t))
-  
+  (define-values (E environment? D) (make-encapsulation-type))
+
+  (define (make-environment . parents)
+    (E (cons '() (map D parents))))
+
   (define (lookup sym env)
-    (let* ((bindings (environment-bindings env))
-           (parents (environment-parents env))
-           (binding (assq sym bindings)))
+    (let ((binding (get-binding sym (D env))))
       (if (pair? binding)
           (cdr binding)
-	  (let lp ((parents parents))
+          (error 'lookup "unbound symbol" sym))))
+
+  (define (get-binding sym tree)
+    (let ((binding (assq sym (car tree))))
+      (if (pair? binding)
+          binding
+	  (let lp ((parents (cdr tree)))
 	    (if (null? parents)
-		not-found
-		(let ((res (lookup sym (car parents))))
-		  (if (eqv? res not-found)
+		'()
+		(let ((res (get-binding sym (car parents))))
+		  (if (null? res)
 		      (lp (cdr parents))
 		      res)))))))
 
-  (let ((res (lookup sym env)))
-    (if (eqv? res not-found)
-	(error 'environment-lookup "Unbound symbol" sym)
-	res)))
+  (define (bind! env sym value)
+    (let* ((tree (D env))
+           (binding (assq sym (car tree))))
+      (if (pair? binding)
+          (set-cdr! binding value)
+          (set-car! tree (cons (cons sym value)
+                               (car tree))))))
+
+  (define (add-bindings! env bindings)
+    (for-each
+      (lambda (binding)
+        (bind! env (car binding) (cdr binding)))
+      bindings)))
+
+($provide! (operative? make-operative operate)
+  (define-values (make-operative operative? D) (make-encapsulation-type))
+
+  (define (operate operative operands env)
+    ((D operative) operands env)))
+
+(define-values (wrap applicative? unwrap) (make-encapsulation-type))
 
 (define (match-formal-parameter-tree tree object result)
   (cond ((symbol? tree)
@@ -49,7 +74,7 @@
          (error 'match-formal-parameter-tree "malformed parameter tree" tree))))
 
 (define (kernel-eval exp env)
-  (cond ((symbol? exp) (environment-lookup exp env))
+  (cond ((symbol? exp) (lookup exp env))
         ((pair? exp) (combine (kernel-eval (car exp) env)
                               (cdr exp)
                               env))
@@ -59,14 +84,11 @@
   (cond ((operative? combiner)
          (operate combiner operands env))
         ((applicative? combiner)
-         (combine (applicative-combiner combiner)
+         (combine (unwrap combiner)
                   (map-kernel-eval operands env)
                   env))
         (#t
             (error 'combine "non-combiner in combiner position" combiner))))
-
-(define (operate operative operands env)
-  ((operative-action operative) operands env))
 
 (define (map-kernel-eval operands env)
   (map
@@ -81,17 +103,14 @@
 ;; TODO eq? (optional)
 ;; TODO set-car! set-cdr! copy-es-immutable (optional)
 
-(define core-environment (make-environment '() '()))
+(define core-environment (make-environment))
 
 (define (kernel-define! symbol value)
-  (environment-bindings-set!
-    core-environment
-    (cons (cons symbol value)
-          (environment-bindings core-environment))))
+  (add-bindings! core-environment (list (cons symbol value))))
 
 ;; helper for scheme applicatives
 (define (make-scheme-applicative proc)
-  (make-applicative (make-operative (lambda (args env) (apply proc args)))))
+  (wrap (make-operative (lambda (args env) (apply proc args)))))
 
 ;; helper for scheme predicates
 (define (make-scheme-predicate pred)
@@ -140,8 +159,7 @@
 (kernel-define! 'eval (make-scheme-applicative kernel-eval))
 
 (kernel-define! 'make-environment
-  (make-scheme-applicative
-    (lambda parents (make-environment '() parents))))
+  (make-scheme-applicative make-environment))
 
 (kernel-define! '$define!
   (make-operative
@@ -150,7 +168,7 @@
              (expression (cadr operand-tree))
              (expression-result (kernel-eval expression env))
              (new-bindings (match-formal-parameter-tree definiend expression-result '())))
-        (environment-bindings-set! env (append new-bindings (environment-bindings env)))
+        (add-bindings! env new-bindings)
         +inert+))))
 
 
@@ -162,10 +180,11 @@
             (expr (caddr operand-tree)))
         (make-operative
           (lambda (operands dynamic-env)
-            (kernel-eval expr
-                         (make-environment (match-formal-parameter-tree formals operands
-                                             (match-formal-parameter-tree eformal dynamic-env '()))
-                                           (list static-env)))))))))
+            (let ((env (make-environment static-env)))
+              (add-bindings! env
+                             (match-formal-parameter-tree formals operands
+                               (match-formal-parameter-tree eformal dynamic-env '())))
+              (kernel-eval expr env))))))))
 
-(kernel-define! 'wrap (make-scheme-applicative make-applicative))
-(kernel-define! 'unwrap (make-scheme-applicative applicative-combiner))
+(kernel-define! 'wrap (make-scheme-applicative wrap))
+(kernel-define! 'unwrap (make-scheme-applicative unwrap))

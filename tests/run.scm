@@ -23,33 +23,36 @@
 
 (test-group "eval"
 
-(define empty-environment (make-environment '() '()))
+(define empty-environment (make-environment))
 
 (test "evaluating number" 42 (kernel-eval 42 empty-environment))
 (test "evaluating strings" "foo" (kernel-eval "foo" empty-environment))
 (test "evaluating #t" #t (kernel-eval #t empty-environment))
 (test "evaluating #f" #f (kernel-eval #f empty-environment))
 
-(define simple-environment (make-environment `((foo . 42)
-                                               (a . 1)
-                                               (b . 2)
-                                               (c . 3))
-                                             '()))
+(define simple-environment (make-environment))
+(add-bindings! simple-environment '((foo . 42)
+                                    (a . 1)
+                                    (b . 2)
+                                    (c . 3)))
 
-(define simple-child-environment (make-environment '() (list simple-environment)))
-(define multi-parent-environment (make-environment '() (list empty-environment
-							     simple-child-environment)))
+(define simple-child-environment (make-environment simple-environment))
+(define multi-parent-environment
+  (make-environment empty-environment simple-child-environment))
 
 (test "evaluating bound symbol" 42 (kernel-eval 'foo simple-environment))
 (test-error "evaluating unbound symbol" (kernel-eval 'bar simple-environment))
 (test "evaluating bound symbol in parent environment" 42 (kernel-eval 'foo simple-child-environment))
 (test "evaluating bould symbol deep in ancestors" 42 (kernel-eval 'foo multi-parent-environment))
 
-(define simple-operative (kernel-eval (list (environment-lookup '$vau core-environment) 'x 'e 'x) empty-environment))
-(define simple-applicative (make-applicative simple-operative))
-(define combiner-environment (make-environment (list (cons '$list simple-operative)
-                                                     (cons 'list simple-applicative))
-                                               (list simple-environment)))
+(define k$vau (lookup '$vau core-environment))
+(define kwrap (lookup 'wrap core-environment))
+
+(define simple-operative (kernel-eval (list k$vau 'x 'e 'x) empty-environment))
+(define simple-applicative (wrap simple-operative))
+(define combiner-environment (make-environment simple-environment))
+(add-bindings! combiner-environment (list (cons '$list simple-operative)
+                                          (cons 'list simple-applicative)))
 
 (test "evaluating simple operative" '(a b c) (kernel-eval '($list a b c) combiner-environment))
 (test "evaluating simple applicative" '(1 2 3) (kernel-eval '(list a b c) combiner-environment))
@@ -57,9 +60,9 @@
 
 (test-group "primitive combiners"
 
-(define primitive-environment (make-environment (list (cons '$vau (environment-lookup '$vau core-environment))
-                                                    (cons 'wrap (environment-lookup 'wrap core-environment)))
-                                              (list combiner-environment)))
+(define primitive-environment (make-environment combiner-environment))
+(add-bindings! primitive-environment  (list (cons '$vau k$vau)
+                                            (cons 'wrap kwrap)))
 
 (test "primitive wrap call" '(1 2 3) (kernel-eval '((wrap $list) a b c) primitive-environment))
 (test "primitive $vau call" '(b a) (kernel-eval `(($vau (x y) ,+ignore+ (list y x)) a b) primitive-environment))

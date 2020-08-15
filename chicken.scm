@@ -6,6 +6,9 @@
 ;; TODO remove
 (import (chicken base) (chicken condition) (srfi 1) utf8 utf8-srfi-14 utf8-case-map unicode-char-sets)
 
+(include "shims.scm")
+(include "chicken-shims.scm")
+
 (include "cycle.scm")
 (include "reader.scm")
 (include "writer.scm")

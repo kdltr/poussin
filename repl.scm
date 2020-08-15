@@ -18,4 +18,4 @@
       (kernel-repl env))))
 
 (define ground-environment
-  (make-environment '() (list core-environment)))
+  (make-environment core-environment))

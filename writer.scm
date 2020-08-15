@@ -26,6 +26,9 @@
          (display #\)))
 	((null? exp)
 	 (display "()"))
+        ((comment? exp)
+         (display "#;")
+         (kernel-write (comment-contents exp)))
 	(else
 	 (display exp))))
 

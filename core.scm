@@ -58,6 +58,9 @@
 
 (define-values (wrap applicative? unwrap) (make-encapsulation-type))
 
+(define-values (make-comment comment? comment-contents)
+  (make-encapsulation-type))
+
 (define (match-formal-parameter-tree tree object result)
   (cond ((symbol? tree)
          (if (assq tree result)

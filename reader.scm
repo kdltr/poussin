@@ -82,14 +82,21 @@
              (next-char)
              (read-character))
             (#t
-	     (let ((sym (read-symbol)))
-               (case sym
-		 ((t) #t)
-		 ((f) #f)
-                 ((eof) '#!eof)
-                 ((inert) +inert+)
-                 ((ignore) +ignore+)
-                 (else (error "unknown object" sym)))))))
+             (let ((char c))
+               (next-char)
+               (case char
+                 ((#\;) (make-comment (top-read)))
+		 ((#\t) #t)
+		 ((#\f) #f)
+                 (else (read-long-special char)))))))
+
+    (define (read-long-special first)
+      (let ((sym (string->symbol (read-identifier (string first)))))
+        (case sym
+          ((eof) '#!eof)
+          ((inert) +inert+)
+          ((ignore) +ignore+)
+          (else (error 'read "unknown object" sym)))))
 
     (define (read-character)
       (let ((char c))
@@ -111,7 +118,7 @@
 	((escape) #\esc)
 	((delete) #\delete)
 	((space) #\space)
-	(else (error "unknown character" sym))))
+	(else (error 'read "unknown character" sym))))
 
     (define (top-read)
       (skip-white-spaces)

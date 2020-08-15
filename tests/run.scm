@@ -3,6 +3,7 @@
 (load-relative "../chicken.scm")
 (import poussin)
 
+#;
 (test-group "cyclic lists"
 	    (load-relative "cycle.scm"))
 

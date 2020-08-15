@@ -11,11 +11,14 @@
 
 (define (kernel-repl env)
   (let ((exp (kernel-read)))
-    (unless (eof-object? exp)
-      (handle-exceptions exn (print-error-message exn (current-error-port) "Kernel error")
-        (kernel-write (kernel-eval exp env))
-        (newline))
-      (kernel-repl env))))
+    (cond ((eof-object? exp))
+          (#t
+              (kernel-write (kernel-eval exp env))
+              (newline)
+              (kernel-repl env)))))
 
-(define ground-environment
-  (make-environment core-environment))
+(define ground-environment (make-environment core-environment))
+(kernel-load "../kernel-lib/lib1.k" ground-environment)
+
+(define (kernel-interpreter)
+  (kernel-repl ground-environment))

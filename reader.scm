@@ -1,16 +1,18 @@
-(define char-set:non-symbol (char-set-union char-set:white-space
-                                            (char-set #\( #\) #\")))
+(define +white-space-chars+
+  (list #\tab #\newline #\vtab #\page #\return #\space))
+
+(define +non-symbol-chars+ (append (list #\( #\) #\")
+                                   +white-space-chars+))
+
+(define +digit-chars+
+  (list #\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9))
 
 (define (stop? c)
   (or (eof-object? c)
-      (char-set-contains? char-set:non-symbol c)))
+      (member c +non-symbol-chars+)))
 
-(define (digit? c)
-  (char-set-contains? char-set:digit c))
-
-
-(define (string-ci->symbol str)
-  (string->symbol (utf8-string-downcase str)))
+(define (digit? c) (member c +digit-chars+))
+(define (white? c) (member c +white-space-chars+))
 
 (define (kernel-read)
   (let ((c (read-char)))
@@ -20,26 +22,26 @@
       c)
 
     (define (skip-white-spaces)
-      (if (char-set-contains? char-set:white-space c)
+      (if (white? c)
           (begin (next-char) (skip-white-spaces) #t)
           #f))
     
     (define (read-identifier acc)
       (if (stop? c)
-          (conc acc "") ;; convert to string
+          acc
           (let* ((char c))
             (next-char)
-            (read-identifier (conc acc char)))))
+            (read-identifier (string-append acc (string char))))))
 
     (define (read-symbol)
-      (string-ci->symbol (read-identifier "")))
+      (string->symbol (read-identifier "")))
     
     (define (read-number)
       (let lp ((sum 0))
 	(let* ((n (- (char->integer c) 48))
 	       (new-sum (+ (* sum 10) n)))
 	  (next-char)
-	  (if (char-set-contains? char-set:digit c)
+	  (if (digit? c)
 	      (lp new-sum)
 	      new-sum))))
 
@@ -51,7 +53,10 @@
              (next-char)
              (let ((val (top-read)))
                (skip-white-spaces)
-               (assert (eqv? c #\) ))
+               (if (eqv? c #\) )
+                       #t
+                       (error 'read-list
+                              "no end of list found"))
                (next-char)
                val))
             (#t
@@ -59,12 +64,18 @@
 
     (define (read-string)
       (case c
-	((#\") (begin (next-char) ""))
-	((#\\)
-	 (next-char)
-	 (conc c (begin (next-char) (read-string))))
-	(else
-	 (conc c (begin (next-char) (read-string))))))
+        ((#\")
+         (next-char)
+         "")
+        ((#\\)
+         (next-char)
+         (let ((char (string c)))
+           (next-char)
+           (string-append char (read-string))))
+         (else
+           (let ((char (string c)))
+             (next-char)
+             (string-append char (read-string))))))
 
     (define (read-special)
       (cond ((char=? c #\\)
@@ -86,8 +97,8 @@
 	(if (stop? c)
 	    char
 	    (symbol->character
-	     (string-ci->symbol
-	       (read-identifier char))))))
+	     (string->symbol
+	       (read-identifier (string char)))))))
 
     (define (symbol->character sym)
       (case sym
@@ -118,7 +129,7 @@
 	     (next-char)
 	     (if (digit? c)
 		 (- (read-number))
-		 (string-ci->symbol (read-identifier #\-))))
+		 (string->symbol (read-identifier "-"))))
 	    ((digit? c)
 	     (read-number))
             (else

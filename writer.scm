@@ -32,16 +32,16 @@
 (define (write-character char)
   (display
     (case char
-      ((#\null) "#\\null")
+      ((#\nul) "#\\null")
       ((#\alarm) "#\\alarm")
       ((#\backspace) "#\\backspace")
       ((#\tab) "#\\tab")
       ((#\newline) "#\\newline")
       ((#\return) "#\\return")
-      ((#\escape) "#\\escape")
+      ((#\esc) "#\\escape")
       ((#\delete) "#\\delete")
       ((#\space) "#\\space")
-      (else (conc "#\\" char)))))
+      (else (string-append "#\\" (string char))))))
 
 (define (write-pairs p)
   (kernel-write (car p))

@@ -6,3 +6,4 @@ repl
 *.import.scm
 *.install.sh
 *.build.sh
+*.link

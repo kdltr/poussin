@@ -1,6 +1,6 @@
 (import (chicken load) (chicken port) srfi-1 test utf8)
 
-(load-relative "../chicken.scm")
+(load-relative "../poussin-chicken.scm")
 (import poussin)
 
 #;
